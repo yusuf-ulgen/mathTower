@@ -1,13 +1,38 @@
 export const COLORS = {
   background: '#0F172A',
-  surface: '#1E293B',
   primary: '#38BDF8',
-  accent: '#F472B6',
-  player: '#22C55E',    // Green
-  enemy: '#EF4444',     // Red
-  neutral: '#94A3B8',   // Gray
+  player: '#22C55E',
+  enemy: '#EF4444',
   text: '#F8FAFC',
-  textDim: '#64748B',
+  textDim: '#94A3B8',
+  accent: '#FCD34D',
+};
+
+export const THEMES = {
+  default: {
+    player: '#22C55E',
+    enemy: '#EF4444',
+    accent: '#38BDF8',
+    bg: '#0F172A'
+  },
+  neon: {
+    player: '#00FF9F',
+    enemy: '#FF0055',
+    accent: '#00B8FF',
+    bg: '#1A1A1A'
+  },
+  medieval: {
+    player: '#8B4513',
+    enemy: '#4A0E0E',
+    accent: '#D4AF37',
+    bg: '#2F2F2F'
+  },
+  space: {
+    player: '#7D5FFF',
+    enemy: '#32FF7E',
+    accent: '#18DCFF',
+    bg: '#050510'
+  }
 };
 
 export const SPACING = {

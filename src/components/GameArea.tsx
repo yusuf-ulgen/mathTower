@@ -4,8 +4,18 @@ import { useGameStore } from '../store/useGameStore';
 import { COLORS, SPACING } from '../constants/theme';
 import { Tower } from './Tower';
 import { RushAnimation } from './RushAnimation';
+import { GhostRushAnimation } from './GhostRushAnimation';
 import { JokerBar } from './JokerBar';
-import Animated, { FadeIn, FadeOut, SlideInUp } from 'react-native-reanimated';
+import Animated, { 
+  FadeIn, 
+  FadeOut, 
+  SlideInUp, 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSequence, 
+  withTiming,
+  withRepeat
+} from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 
@@ -22,7 +32,8 @@ export const GameArea: React.FC = () => {
     resetGame,
     initLevel,
     tick,
-    goToMenu
+    goToMenu,
+    attacking,
   } = useGameStore((state: any) => ({
     playerTower: state.playerTower,
     enemyTowers: state.enemyTowers,
@@ -36,6 +47,29 @@ export const GameArea: React.FC = () => {
     initLevel: state.initLevel,
     tick: state.tick,
     goToMenu: state.goToMenu,
+    attacking: state.attacking,
+  }));
+
+  const shakeAnim = useSharedValue(0);
+
+  const triggerShake = () => {
+    shakeAnim.value = withSequence(
+      withTiming(-10, { duration: 50 }),
+      withTiming(10, { duration: 50 }),
+      withTiming(-5, { duration: 50 }),
+      withTiming(5, { duration: 50 }),
+      withTiming(0, { duration: 50 })
+    );
+  };
+
+  useEffect(() => {
+    if (attacking) {
+      triggerShake();
+    }
+  }, [attacking?.count]);
+
+  const animatedShakeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeAnim.value }]
   }));
 
   useEffect(() => {
@@ -47,7 +81,7 @@ export const GameArea: React.FC = () => {
   const isLowTime = timeLeft < 5 && timeLeft > 0;
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, animatedShakeStyle]}>
       {isLowTime && <View style={styles.vignette} />}
 
       <View style={styles.header}>
@@ -78,10 +112,30 @@ export const GameArea: React.FC = () => {
             <Tower key={tower.id} tower={tower} />
           ))}
           <RushAnimation />
+          <GhostRushAnimation />
         </View>
       </ScrollView>
 
       {/* Game Over Message Overlay */}
+      {isLevelCleared && (
+        <View style={styles.confettiContainer} pointerEvents="none">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <Animated.View 
+              key={i}
+              entering={FadeIn.delay(i * 50)}
+              style={[
+                styles.confetti, 
+                { 
+                  backgroundColor: ['#FFD700', '#FF4500', '#1E90FF', '#32CD32'][i % 4],
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`
+                }
+              ]} 
+            />
+          ))}
+        </View>
+      )}
+
       {isGameOver && (
         <Animated.View entering={FadeIn} style={styles.overlay}>
           <Text style={styles.gameOverText}>OYUN BİTTİ!</Text>
@@ -112,7 +166,7 @@ export const GameArea: React.FC = () => {
 
       {/* Joker Bar (Only visible if level started and not over) */}
       {!isGameOver && !isLevelCleared && <JokerBar />}
-    </View>
+    </Animated.View>
   );
 };
 
@@ -128,6 +182,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
+  confettiContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 200,
+  },
+  confetti: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
   levelLabel: {
     color: COLORS.text,
     fontSize: 24,
@@ -141,8 +205,9 @@ const styles = StyleSheet.create({
   },
   timerContainer: {
     backgroundColor: 'rgba(0,0,0,0.4)',
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     paddingVertical: 5,
+    paddingTop: 10,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',

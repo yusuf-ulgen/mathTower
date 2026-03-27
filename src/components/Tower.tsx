@@ -1,9 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { Tower as TowerType } from '../types/game';
-import { Unit } from './Unit';
-import { COLORS, SPACING } from '../constants/theme';
+import { COLORS, SPACING, THEMES } from '../constants/theme';
 import { useGameStore } from '../store/useGameStore';
+import { Tower as TowerType, ThemeType } from '../types/game';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 interface Props {
@@ -11,9 +10,10 @@ interface Props {
 }
 
 export const Tower: React.FC<Props> = ({ tower }: Props) => {
-  const { attackTower, updateTowerPosition } = useGameStore((state: any) => ({
+  const { attackTower, updateTowerPosition, activeTheme } = useGameStore((state: any) => ({
     attackTower: state.attackTower,
     updateTowerPosition: state.updateTowerPosition,
+    activeTheme: state.activeTheme,
   }));
 
   const handleLayout = (event: any) => {
@@ -36,10 +36,21 @@ export const Tower: React.FC<Props> = ({ tower }: Props) => {
         />
         
         {/* Simple Tower Visuals */}
-        <View style={[styles.body, tower.isBoss && styles.bossBody]}>
-          <View style={styles.window} />
+        <View style={[
+          styles.body, 
+          { 
+            backgroundColor: THEMES[activeTheme as ThemeType].bg, 
+            borderColor: (THEMES[activeTheme as ThemeType] as any)[tower.type] || '#334155' 
+          },
+          tower.isBoss && styles.bossBody
+        ]}>
+          <View style={[styles.window, { borderColor: THEMES[activeTheme as ThemeType].accent }]} />
         </View>
-        <View style={[styles.base, tower.isBoss && styles.bossBase]} />
+        <View style={[
+          styles.base, 
+          { backgroundColor: THEMES[activeTheme as ThemeType].bg },
+          tower.isBoss && styles.bossBase
+        ]} />
       </TouchableOpacity>
     </View>
   );
@@ -53,10 +64,8 @@ const styles = StyleSheet.create({
   body: {
     width: 60,
     height: 100,
-    backgroundColor: COLORS.surface,
     borderLeftWidth: 4,
     borderRightWidth: 4,
-    borderColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
@@ -64,26 +73,22 @@ const styles = StyleSheet.create({
   bossBody: {
     width: 100,
     height: 160,
-    borderColor: COLORS.enemy,
-    backgroundColor: '#1e1b4b', // Dark purple/blue for boss
+    backgroundColor: '#1e1b4b', 
   },
   window: {
     width: 20,
     height: 30,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'rgba(0,0,0,0.3)',
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#475569',
   },
   base: {
     width: 80,
     height: 10,
-    backgroundColor: COLORS.surface,
     borderBottomLeftRadius: 4,
     borderBottomRightRadius: 4,
   },
   bossBase: {
     width: 120,
-    backgroundColor: '#1e1b4b',
   },
 });

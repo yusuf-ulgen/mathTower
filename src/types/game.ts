@@ -40,10 +40,47 @@ export interface ShopItem {
   icon: string;
 }
 
+export interface UserStats {
+  totalTowersCaptured: number;
+  totalLevelsCleared: number;
+  totalGoldEarned: number;
+  maxComboReached: number;
+  lastDailyReset: number; 
+  lastWheelSpin: number; // timestamp
+}
+
+export type ThemeType = 'default' | 'neon' | 'medieval' | 'space';
+export type GameMode = 'normal' | 'weekly';
+
+export type QuestType = 'capture_towers' | 'clear_levels' | 'earn_gold';
+
+export interface Quest {
+  id: string;
+  type: QuestType;
+  title: string;
+  target: number;
+  current: number;
+  reward: number;
+  isClaimed: boolean;
+}
+
+export interface RunLog {
+  timeOffset: number;
+  targetId: string;
+}
+
+export interface BestRun {
+  totalTime: number;
+  logs: RunLog[];
+}
+
 export interface GameState {
-  playerTower: Tower; // The tower player starts with
+  playerTower: Tower; 
   enemyTowers: Tower[];
   difficulty: DifficultyMode;
+  gameMode: GameMode;
+  activeTheme: ThemeType;
+  unlockedThemes: ThemeType[];
   gold: number;
   score: number;
   isGameOver: boolean;

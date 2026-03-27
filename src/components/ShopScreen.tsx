@@ -2,8 +2,9 @@ import React from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
 import { COLORS, SPACING } from '../constants/theme';
-import { Clock, Shield, Zap, TrendingDown } from 'lucide-react-native';
-import { JokerType, ShopItem } from '../types/game';
+import { Clock, Shield, Zap, TrendingDown, Palette } from 'lucide-react-native';
+import { JokerType, ShopItem, ThemeType } from '../types/game';
+import { THEMES } from '../constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -14,11 +15,21 @@ const SHOP_ITEMS: ShopItem[] = [
 ];
 
 export const ShopScreen: React.FC = () => {
-  const { gold, inventory, buyItem } = useGameStore((state: any) => ({
+  const { gold, inventory, buyItem, unlockedThemes, activeTheme, buyTheme, setTheme } = useGameStore((state: any) => ({
     gold: state.gold,
     inventory: state.inventory,
     buyItem: state.buyItem,
+    unlockedThemes: state.unlockedThemes,
+    activeTheme: state.activeTheme,
+    buyTheme: state.buyTheme,
+    setTheme: state.setTheme,
   }));
+
+  const THEME_ITEMS = [
+    { id: 'neon', name: 'Neon Paketi', price: 5000, description: 'Siberpunk gece hayatı ve neon ışıklar.', theme: 'neon' as ThemeType },
+    { id: 'medieval', name: 'Ortaçağ Teması', price: 5000, description: 'Şövalyeler ve antik kale surları.', theme: 'medieval' as ThemeType },
+    { id: 'space', name: 'Uzay Yolculuğu', price: 5000, description: 'Galaksiler arası savaş teması.', theme: 'space' as ThemeType },
+  ];
 
   const getIcon = (iconName: string) => {
     switch (iconName) {
@@ -35,8 +46,8 @@ export const ShopScreen: React.FC = () => {
         <Text style={styles.title}>MAĞAZA</Text>
         <Text style={styles.goldText}>💰 {gold}</Text>
       </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.sectionTitle}>JOKERLER</Text>
         {SHOP_ITEMS.map((item) => (
           <View key={item.id} style={styles.itemCard}>
             <View style={styles.itemHeader}>
@@ -61,8 +72,48 @@ export const ShopScreen: React.FC = () => {
             </View>
           </View>
         ))}
+
+        <Text style={[styles.sectionTitle, { marginTop: 30 }]}>TEMALAR</Text>
+        {THEME_ITEMS.map((item) => {
+          const isUnlocked = unlockedThemes.includes(item.theme);
+          const isActive = activeTheme === item.theme;
+
+          return (
+            <View key={item.id} style={[styles.itemCard, isActive && styles.activeCard]}>
+              <View style={styles.itemHeader}>
+                <View style={[styles.iconBox, { backgroundColor: isUnlocked ? THEMES[item.theme].player : 'rgba(255,255,255,0.05)' }]}>
+                  <Palette size={32} color={isUnlocked ? '#FFF' : COLORS.textDim} />
+                </View>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemDesc}>{item.description}</Text>
+                </View>
+              </View>
+
+              <View style={styles.actionRow}>
+                {isUnlocked ? (
+                  <TouchableOpacity 
+                    style={[styles.buyButton, isActive && styles.activeButton]}
+                    onPress={() => setTheme(item.theme)}
+                    disabled={isActive}
+                  >
+                    <Text style={styles.buyButtonText}>{isActive ? 'AKTİF' : 'SEÇ'}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity 
+                    style={[styles.buyButton, gold < item.price && styles.buyButtonDisabled]}
+                    onPress={() => buyTheme(item.theme, item.price)}
+                    disabled={gold < item.price}
+                  >
+                    <Text style={styles.buyButtonText}>{item.price} Altın</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          );
+        })}
         
-        <Text style={styles.infoText}>Bölüm kazandıkça altın topla, jokerleri stratejik kullan!</Text>
+        <Text style={styles.infoText}>Bölüm kazandıkça altın topla, kafa tutan temaları aç!</Text>
       </ScrollView>
     </View>
   );
@@ -95,8 +146,15 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     paddingBottom: 100,
   },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+    letterSpacing: 1,
+  },
   itemCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(30, 41, 59, 0.7)',
     borderRadius: 20,
     padding: SPACING.lg,
     marginBottom: SPACING.lg,
@@ -158,8 +216,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#334155',
   },
   buyButtonText: {
-    color: COLORS.background,
+    color: '#000',
     fontWeight: 'bold',
+  },
+  activeCard: {
+    borderColor: COLORS.primary,
+    borderWidth: 2,
+  },
+  activeButton: {
+    backgroundColor: COLORS.accent,
   },
   infoText: {
     textAlign: 'center',

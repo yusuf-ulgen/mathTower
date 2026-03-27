@@ -2,8 +2,9 @@ import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { User } from 'lucide-react-native';
 import Animated from 'react-native-reanimated';
-import { COLORS, SPACING } from '../constants/theme';
-import { MathOperation } from '../types/game';
+import { COLORS, SPACING, THEMES } from '../constants/theme';
+import { MathOperation, ThemeType } from '../types/game';
+import { useGameStore } from '../store/useGameStore';
 
 interface Props {
   type: 'player' | 'enemy' | 'neutral';
@@ -13,7 +14,13 @@ interface Props {
 }
 
 export const Unit: React.FC<Props> = ({ type, power, operation, isBoss }: Props) => {
-  const color = type === 'player' ? COLORS.player : type === 'enemy' ? COLORS.enemy : COLORS.neutral;
+  const {
+    activeTheme
+  } = useGameStore((state: any) => ({
+    activeTheme: state.activeTheme
+  }));
+
+  const bgColor = (THEMES[activeTheme as ThemeType] as any)[type] || '#94A3B8';
 
   const formatOperation = (op: MathOperation) => {
     if (op.expression) return op.expression;
@@ -28,14 +35,18 @@ export const Unit: React.FC<Props> = ({ type, power, operation, isBoss }: Props)
   return (
     <View style={[styles.container, { transform: [{ scale }] }]}>
       {/* Math Operation or Power Display */}
-      <View style={[styles.badge, { backgroundColor: color, minWidth: isBoss ? 80 : 50 }]}>
+      <View style={[
+        styles.badge,
+        { backgroundColor: bgColor },
+        isBoss && styles.bossBadge
+      ]}>
         <Text style={[styles.badgeText, isBoss && styles.bossText]}>
           {operation ? formatOperation(operation) : power}
         </Text>
       </View>
 
       {/* The Unit (Soldier) Icon */}
-      <Animated.View style={[styles.unitBody, { backgroundColor: color }]}>
+      <Animated.View style={[styles.unitBody, { backgroundColor: bgColor }]}>
         <User color={COLORS.background} size={30} strokeWidth={3} />
       </Animated.View>
     </View>
@@ -60,8 +71,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
   },
+  bossBadge: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
   badgeText: {
-    color: COLORS.background,
+    color: '#FFF',
     fontWeight: '900',
     fontSize: 16,
   },
