@@ -1,49 +1,46 @@
 import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { Tower as TowerType } from '../types/game';
-import { EntityCard } from './EntityCard';
+import { Unit } from './Unit';
 import { COLORS, SPACING } from '../constants/theme';
 import { useGameStore } from '../store/useGameStore';
-
-import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 interface Props {
   tower: TowerType;
 }
 
-export const Tower: React.FC<Props> = ({ tower }) => {
-  const attackEnemy = useGameStore((state) => state.attackEnemy);
+export const Tower: React.FC<Props> = ({ tower }: Props) => {
+  const { attackTower, updateTowerPosition } = useGameStore((state: any) => ({
+    attackTower: state.attackTower,
+    updateTowerPosition: state.updateTowerPosition,
+  }));
+
+  const handleLayout = (event: any) => {
+    const { x, y } = event.nativeEvent.layout;
+    updateTowerPosition(tower.id, x, y);
+  };
 
   return (
-    <View style={styles.container}>
-      {/* Tower Roof */}
-      <View style={styles.roof} />
-
-      <View style={styles.body}>
-        {tower.floors.map((floor) => (
-          <Animated.View 
-            key={floor.id} 
-            layout={Layout.springify()} 
-            style={styles.floor}
-          >
-            {floor.enemy ? (
-              <Animated.View entering={FadeIn.duration(400)} exiting={FadeOut.duration(300)}>
-                <EntityCard 
-                  entity={floor.enemy} 
-                  onPress={(x, y) => attackEnemy(tower.id, floor.id, x, y)} 
-                />
-              </Animated.View>
-            ) : (
-              <Animated.View entering={FadeIn} style={styles.emptyFloor}>
-                <Text style={styles.clearedText}>CLEARED</Text>
-              </Animated.View>
-            )}
-          </Animated.View>
-        ))}
-      </View>
-
-      {/* Tower Base */}
-      <View style={styles.base} />
+    <View style={styles.container} onLayout={handleLayout}>
+      <TouchableOpacity 
+        activeOpacity={0.8}
+        onPress={() => attackTower(tower.id)}
+        disabled={tower.type === 'player'}
+      >
+        <Unit 
+          type={tower.type} 
+          power={tower.power} 
+          operation={tower.operation} 
+          isBoss={tower.isBoss}
+        />
+        
+        {/* Simple Tower Visuals */}
+        <View style={[styles.body, tower.isBoss && styles.bossBody]}>
+          <View style={styles.window} />
+        </View>
+        <View style={[styles.base, tower.isBoss && styles.bossBase]} />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -51,49 +48,42 @@ export const Tower: React.FC<Props> = ({ tower }) => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    marginHorizontal: SPACING.md,
-  },
-  roof: {
-    width: 140,
-    height: 20,
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    borderBottomWidth: 4,
-    borderBottomColor: COLORS.background,
+    marginHorizontal: SPACING.lg,
   },
   body: {
+    width: 60,
+    height: 100,
     backgroundColor: COLORS.surface,
-    padding: SPACING.sm,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
     borderColor: '#334155',
-  },
-  floor: {
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: COLORS.background,
-    minHeight: 80,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 10,
   },
-  emptyFloor: {
-    width: 120,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: 0.3,
+  bossBody: {
+    width: 100,
+    height: 160,
+    borderColor: COLORS.enemy,
+    backgroundColor: '#1e1b4b', // Dark purple/blue for boss
   },
-  clearedText: {
-    color: COLORS.textDim,
-    fontSize: 12,
-    fontWeight: 'bold',
+  window: {
+    width: 20,
+    height: 30,
+    backgroundColor: COLORS.background,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#475569',
   },
   base: {
-    width: 160,
+    width: 80,
     height: 10,
     backgroundColor: COLORS.surface,
     borderBottomLeftRadius: 4,
     borderBottomRightRadius: 4,
+  },
+  bossBase: {
+    width: 120,
+    backgroundColor: '#1e1b4b',
   },
 });

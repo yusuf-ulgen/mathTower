@@ -1,14 +1,13 @@
 export const COLORS = {
-  background: '#0F172A', // Deep dark blue
-  surface: '#1E293B',    // Lighter dark slate
-  primary: '#38BDF8',    // Sky blue
-  accent: '#F472B6',     // Pink
-  enemy: '#F87171',      // Redish coral
-  hero: '#4ADE80',       // Mint green
-  boss: '#818CF8',       // Indigo
-  mystery: '#A855F7',    // Purple
+  background: '#0F172A',
+  surface: '#1E293B',
+  primary: '#38BDF8',
+  accent: '#F472B6',
+  player: '#22C55E',    // Green
+  enemy: '#EF4444',     // Red
+  neutral: '#94A3B8',   // Gray
   text: '#F8FAFC',
-  textDim: '#94A3B8',
+  textDim: '#64748B',
 };
 
 export const SPACING = {
