@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "math-tower-hero",
+    "slug": "math-tower-hero",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+    },
+    "web": {
+    },
+    "sdkVersion": "54.0.0",
+    "plugins": [
+      "expo-asset"
+    ]
+  }
+}
