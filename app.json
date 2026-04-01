@@ -17,7 +17,6 @@
     },
     "sdkVersion": "54.0.0",
     "plugins": [
-      "expo-asset"
     ]
   }
 }
