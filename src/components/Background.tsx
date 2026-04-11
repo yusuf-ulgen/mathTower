@@ -1,52 +1,87 @@
-import React from 'react';
+// =============================================
+// MATH TOWER WAR — War Themed Background
+// Atmospheric starry night / magical battlefield
+// =============================================
+
+import React, { useMemo } from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withRepeat, 
-  withTiming, 
-  Easing
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+  Easing,
+  withSequence,
 } from 'react-native-reanimated';
 import { COLORS } from '../constants/theme';
-import { Cloud } from 'lucide-react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-const CloudItem = ({ delay, top, size, speed }: { delay: number, top: number, size: number, speed: number }) => {
-  const offset = useSharedValue(-size);
+const StarParticle = ({ startX, startY, size, duration, delay }: {
+  startX: number; startY: number; size: number; duration: number; delay: number;
+}) => {
+  const opacity = useSharedValue(0.1);
 
   React.useEffect(() => {
-    offset.value = withRepeat(
-      withTiming(width + size, {
-        duration: speed,
-        easing: Easing.linear,
-      }),
-      -1,
-      false
-    );
+    setTimeout(() => {
+      opacity.value = withRepeat(
+        withSequence(
+          withTiming(0.6, { duration: duration / 2, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.1, { duration: duration / 2, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      );
+    }, delay);
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: offset.value }],
-    opacity: 0.1,
+    opacity: opacity.value,
     position: 'absolute',
-    top: top,
+    left: startX,
+    top: startY,
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    backgroundColor: COLORS.primary,
   }));
 
-  return (
-    <Animated.View style={animatedStyle}>
-      <Cloud size={size} color={COLORS.text} />
-    </Animated.View>
-  );
+  return <Animated.View style={animatedStyle} />;
 };
 
-export const Background = () => {
+export const Background = React.memo(() => {
+  // Generate 40 random stars statically so they don't jump on re-renders
+  const particles = useMemo(() => {
+    return Array.from({ length: 40 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * width,
+      y: Math.random() * height,
+      size: Math.random() * 2 + 1,
+      duration: Math.random() * 3000 + 2000,
+      delay: Math.random() * 2000,
+    }));
+  }, []);
+
   return (
-    <View style={StyleSheet.absoluteFill}>
-      <CloudItem delay={0} top={100} size={100} speed={40000} />
-      <CloudItem delay={5000} top={250} size={60} speed={30000} />
-      <CloudItem delay={2000} top={400} size={150} speed={60000} />
-      <CloudItem delay={8000} top={550} size={80} speed={35000} />
+    <View style={styles.container} pointerEvents="none">
+      {particles.map((p) => (
+        <StarParticle
+          key={p.id}
+          startX={p.x}
+          startY={p.y}
+          size={p.size}
+          duration={p.duration}
+          delay={p.delay}
+        />
+      ))}
     </View>
   );
-};
+});
+
+const styles = StyleSheet.create({
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#0a0e1a', // Deep magical night sky
+  },
+});
+
