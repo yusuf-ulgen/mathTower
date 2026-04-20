@@ -51,7 +51,7 @@ export const TR = {
   BUY: 'Satın Al',
 
   // Level Map
-  BOSS_LEVEL: 'PATRON BÖLÜM',
+  BOSS_LEVEL: 'BOSS LVL',
   LOCKED: 'Kilitli',
   STARS: 'Yıldız',
   CHAPTER: 'Bölge',

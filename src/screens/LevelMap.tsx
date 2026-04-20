@@ -18,6 +18,7 @@ import { Background } from '../components/Background';
 import { TR } from '../constants/strings';
 import { useGameStore } from '../store/useGameStore';
 import { useProgressStore } from '../store/useProgressStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const TOTAL_LEVELS = 1000;
@@ -152,6 +153,8 @@ export const LevelMap: React.FC = () => {
     getStartingUnitsBonus: s.getStartingUnitsBonus,
   }));
 
+  const insets = useSafeAreaInsets();
+
   const flatListRef = useRef<FlatList>(null);
 
   // Generate level data
@@ -205,7 +208,7 @@ export const LevelMap: React.FC = () => {
     <View style={styles.container}>
       <Background />
       {/* Header */}
-      <Animated.View entering={FadeIn} style={styles.header}>
+      <Animated.View entering={FadeIn} style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
         <TouchableOpacity onPress={() => setScreen('menu')} style={styles.backButton}>
           <Text style={styles.backText}>← {TR.BACK}</Text>
         </TouchableOpacity>
@@ -244,10 +247,8 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.lg,
-    paddingTop: 50,
     paddingBottom: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',

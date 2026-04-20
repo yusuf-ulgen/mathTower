@@ -8,6 +8,7 @@ import { View, StyleSheet, Text, TouchableOpacity, Dimensions } from 'react-nati
 import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
 import { COLORS, SPACING } from '../constants/theme';
 import { TR } from '../constants/strings';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGameStore } from '../store/useGameStore';
 import { useProgressStore } from '../store/useProgressStore';
 import { BattleTower } from '../components/BattleTower';
@@ -74,6 +75,8 @@ export const BattleScreen: React.FC = () => {
     setScreen: state.setScreen,
     startLevel: state.startLevel,
   }));
+
+  const insets = useSafeAreaInsets();
 
   const { getProductionBonus, getArtilleryResistance, completeLevel, getStartingUnitsBonus } =
     useProgressStore((s) => ({
@@ -153,7 +156,7 @@ export const BattleScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* HUD Header */}
-      <View style={styles.hud}>
+      <View style={[styles.hud, { paddingTop: Math.max(insets.top, 20) }]}>
         <View style={styles.hudLeft}>
           <Text style={styles.levelLabel}>{TR.LEVEL} {selectedLevel}</Text>
           {levelConfig && selectedLevel % 10 === 0 && selectedLevel >= 10 && (
@@ -248,7 +251,7 @@ export const BattleScreen: React.FC = () => {
 
       {/* Selection hint */}
       {selectedTowerId && (
-        <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.selectionHint}>
+        <Animated.View entering={FadeIn} exiting={FadeOut} style={[styles.selectionHint, { bottom: (insets.bottom || 20) + 10 }]}>
           <Text style={styles.selectionHintText}>
             🎯 Saldırmak için düşman kaleye dokun
           </Text>
@@ -365,9 +368,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingTop: 48,
-    paddingBottom: SPACING.sm,
     backgroundColor: 'rgba(10, 14, 26, 0.85)',
   },
   hudLeft: {
@@ -442,7 +444,6 @@ const styles = StyleSheet.create({
   },
   selectionHint: {
     position: 'absolute',
-    bottom: 30,
     left: 0,
     right: 0,
     alignItems: 'center',

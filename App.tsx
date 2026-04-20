@@ -1,9 +1,6 @@
-// =============================================
-// MATH TOWER WAR — App Entry Point
-// =============================================
-
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, StatusBar, Text } from 'react-native';
+import { View, StyleSheet, StatusBar, Text, BackHandler, Alert } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useGameStore } from './src/store/useGameStore';
 import { useProgressStore } from './src/store/useProgressStore';
@@ -16,6 +13,8 @@ import { TR } from './src/constants/strings';
 
 export default function App() {
   const currentScreen = useGameStore((state) => state.currentScreen);
+  const setScreen = useGameStore((state) => state.setScreen);
+  const endBattle = useGameStore((state) => state.endBattle);
   const loadProgress = useProgressStore((state) => state.loadProgress);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -26,6 +25,35 @@ export default function App() {
     };
     init();
   }, []);
+
+  // Handle Back Button
+  useEffect(() => {
+    const backAction = () => {
+      if (currentScreen === 'battle') {
+        Alert.alert(TR.PAUSE, TR.BACK_TO_MENU + '?', [
+          { text: TR.CANCEL, style: 'cancel' },
+          {
+            text: TR.CONFIRM,
+            onPress: () => {
+              endBattle();
+              setScreen('menu');
+            },
+          },
+        ]);
+        return true;
+      }
+      
+      if (currentScreen !== 'menu') {
+        setScreen('menu');
+        return true;
+      }
+
+      return false; // Dynamic back behavior: close app only from menu
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [currentScreen]);
 
   if (isLoading) {
     return (
@@ -53,10 +81,12 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      {renderScreen()}
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+        {renderScreen()}
+      </View>
+    </SafeAreaProvider>
   );
 }
 
