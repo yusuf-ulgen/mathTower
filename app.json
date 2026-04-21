@@ -1,13 +1,10 @@
 {
   "expo": {
-    "name": "math-tower-hero",
+    "name": "Math Tower Hero",
     "slug": "math-tower-hero",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
@@ -15,9 +12,13 @@
       "backgroundColor": "#0a0e1a"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yusufulgen.mathtower"
     },
     "android": {
+      "package": "com.yusufulgen.mathtower",
+      "versionCode": 3,
+      "targetSdkVersion": 35,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0a0e1a"
@@ -26,9 +27,15 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "sdkVersion": "54.0.0",
+    "sdkVersion": "52.0.0",
     "plugins": [
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "454abd30-04b7-49dc-a581-f2f05904d85a"
+      }
+    },
+    "owner": "yusuflgnn"
   }
 }
