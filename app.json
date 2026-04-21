@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.yusufulgen.mathtower",
-      "versionCode": 3,
+      "versionCode": 9,
       "targetSdkVersion": 35,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
