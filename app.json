@@ -27,7 +27,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "sdkVersion": "52.0.0",
+    "sdkVersion": "54.0.0",
     "plugins": [
       "expo-asset"
     ],
