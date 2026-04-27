@@ -11,24 +11,44 @@ import { COLORS, TOWER_COLORS } from '../constants/theme';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-export const AttackLines: React.FC = () => {
-  const paths = useGameStore((state) => state.paths);
-  const towers = useGameStore((state) => state.towers);
-  const attackQueues = useGameStore((state) => state.attackQueues);
+// Separate individual line for better memoization
+const SinglePathLine = React.memo(({ from, to, isActive }: { from: any, to: any, isActive: boolean }) => {
+  const lineColor = isActive ? COLORS.primary : 'rgba(255, 255, 255, 0.08)';
+  const lineWidth = isActive ? 2 : 1;
 
-  // Create tower position lookup
+  return (
+    <Line
+      x1={from.x}
+      y1={from.y}
+      x2={to.x}
+      y2={to.y}
+      stroke={lineColor}
+      strokeWidth={lineWidth}
+      strokeDasharray={isActive ? '8,4' : '4,8'}
+      strokeLinecap="round"
+    />
+  );
+});
+
+export const AttackLines: React.FC = () => {
+  // Select only the data we need to avoid frequent re-renders
+  const paths = useGameStore((state) => state.paths);
+  const towerPositions = useGameStore((state) => 
+    state.towers.map(t => ({ id: t.id, x: t.position.x, y: t.position.y }))
+  );
+  const activePathIds = useGameStore((state) => 
+    state.attackQueues.map(q => q.pathId)
+  );
+
   const towerMap = React.useMemo(() => {
-    const map: { [id: string]: { x: number; y: number; color: string } } = {};
-    towers.forEach((t) => {
-      map[t.id] = { x: t.position.x, y: t.position.y, color: t.color };
+    const map: { [id: string]: { x: number; y: number } } = {};
+    towerPositions.forEach((t) => {
+      map[t.id] = { x: t.x, y: t.y };
     });
     return map;
-  }, [towers]);
+  }, [towerPositions]);
 
-  // Check which paths have active attacks
-  const activePathIds = React.useMemo(() => {
-    return new Set(attackQueues.map((q) => q.pathId));
-  }, [attackQueues]);
+  const activeSet = React.useMemo(() => new Set(activePathIds), [activePathIds]);
 
   return (
     <Svg
@@ -37,31 +57,14 @@ export const AttackLines: React.FC = () => {
       style={StyleSheet.absoluteFill}
       pointerEvents="none"
     >
-      {paths.map((path) => {
-        const from = towerMap[path.fromTowerId];
-        const to = towerMap[path.toTowerId];
-        if (!from || !to) return null;
-
-        const isActive = activePathIds.has(path.id);
-        const lineColor = isActive
-          ? COLORS.primary
-          : 'rgba(255, 255, 255, 0.08)';
-        const lineWidth = isActive ? 2 : 1;
-
-        return (
-          <Line
-            key={path.id}
-            x1={from.x}
-            y1={from.y}
-            x2={to.x}
-            y2={to.y}
-            stroke={lineColor}
-            strokeWidth={lineWidth}
-            strokeDasharray={isActive ? '8,4' : '4,8'}
-            strokeLinecap="round"
-          />
-        );
-      })}
+      {paths.map((path) => (
+        <SinglePathLine
+          key={path.id}
+          from={towerMap[path.fromTowerId]}
+          to={towerMap[path.toTowerId]}
+          isActive={activeSet.has(path.id)}
+        />
+      ))}
     </Svg>
   );
 };

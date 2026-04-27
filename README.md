@@ -1,4 +1,4 @@
-# Math Tower Hero - Çalıştırma Kılavuzu
+# Math Tower - Çalıştırma Kılavuzu
 
 Bu proje bir **Expo** projesidir. Ana bilgisayarına geçtiğinde şu adımları izleyerek oyunu çalıştırabilirsin:
 

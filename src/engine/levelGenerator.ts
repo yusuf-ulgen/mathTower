@@ -75,9 +75,9 @@ function generateTowerPositions(count: number, rng: SeededRandom): Position[] {
 
 // =================== GATE OPERATIONS BY DIFFICULTY ===================
 
-const TUTORIAL_GATES: GateOperation[] = ['+10', 'x2'];
-const MEDIUM_GATES: GateOperation[] = ['+10', '-5', 'x2', '/2'];
-const ADVANCED_GATES: GateOperation[] = ['+10', '-5', 'x2', '/2', '+20', 'x3', '/3', '-10'];
+const TUTORIAL_GATES: GateOperation[] = ['+5', 'x2'];
+const MEDIUM_GATES: GateOperation[] = ['+5', '-5', 'x2', '/2'];
+const ADVANCED_GATES: GateOperation[] = ['+5', '-5', 'x2', '/2', '+10', 'x3', '/3', '-10'];
 
 function getAvailableGates(level: number): GateOperation[] {
   if (level <= 20) return TUTORIAL_GATES;
@@ -99,13 +99,24 @@ export function generateLevel(levelNumber: number): LevelConfig {
   const rng = new SeededRandom(levelNumber * 7919 + 1337);
   const isBossLevel = levelNumber % 10 === 0 && levelNumber >= 10;
 
+  // SPECIAL CASE: Level 23 Balancing
+  const isLevel23 = levelNumber === 23;
+
   // ---------- Tower Count ----------
   let enemyCount: number;
-  if (levelNumber <= 5) enemyCount = 1;
-  else if (levelNumber <= 20) enemyCount = rng.nextInt(1, 3);
-  else if (levelNumber <= 50) enemyCount = rng.nextInt(2, 4);
-  else if (levelNumber <= 100) enemyCount = rng.nextInt(3, 5);
-  else enemyCount = rng.nextInt(4, 7);
+  if (isLevel23) {
+    enemyCount = 1; // Simplify to 1 enemy
+  } else if (levelNumber <= 5) {
+    enemyCount = 1;
+  } else if (levelNumber <= 20) {
+    enemyCount = rng.nextInt(1, 3);
+  } else if (levelNumber <= 50) {
+    enemyCount = rng.nextInt(2, 4);
+  } else if (levelNumber <= 100) {
+    enemyCount = rng.nextInt(3, 5);
+  } else {
+    enemyCount = rng.nextInt(4, 7);
+  }
 
   if (isBossLevel) enemyCount = Math.max(enemyCount, 3);
 
@@ -113,7 +124,9 @@ export function generateLevel(levelNumber: number): LevelConfig {
   const positions = generateTowerPositions(totalTowers - 1, rng);
 
   // ---------- Player Tower ----------
-  const playerStartUnits = GAME.BASE_STARTING_UNITS + Math.floor(levelNumber * 0.5);
+  let playerStartUnits = GAME.BASE_STARTING_UNITS + Math.floor(levelNumber * 0.5);
+  if (isLevel23) playerStartUnits = 30; // Boost player for level 23
+
   const playerTower: Tower = {
     id: 'player',
     color: 'blue',
@@ -129,7 +142,9 @@ export function generateLevel(levelNumber: number): LevelConfig {
   const towers: Tower[] = [playerTower];
 
   for (let i = 0; i < enemyCount; i++) {
-    const baseUnits = Math.floor(3 + levelNumber * 0.8 + rng.nextInt(0, levelNumber / 3));
+    let baseUnits = Math.floor(3 + levelNumber * 0.8 + rng.nextInt(0, levelNumber / 3));
+    if (isLevel23) baseUnits = 10; // Weaken enemy for level 23
+
     const color = rng.pick(enemyColors);
     const isBossTower = isBossLevel && i === enemyCount - 1;
 
@@ -139,7 +154,7 @@ export function generateLevel(levelNumber: number): LevelConfig {
       unitCount: isBossTower ? baseUnits * 3 : baseUnits,
       maxCapacity: isBossTower ? 200 : 50 + levelNumber,
       level: Math.min(GAME.MAX_TOWER_LEVEL, 1 + Math.floor(levelNumber / 25)),
-      productionRate: GAME.BASE_PRODUCTION_RATE * (0.5 + levelNumber * 0.02),
+      productionRate: isLevel23 ? GAME.BASE_PRODUCTION_RATE : GAME.BASE_PRODUCTION_RATE * (0.5 + levelNumber * 0.02),
       position: positions[i + 1],
       isBoss: isBossTower,
     });
@@ -161,12 +176,16 @@ export function generateLevel(levelNumber: number): LevelConfig {
       // Add math gates on some paths
       const pathGates: MathGate[] = [];
       const gateCount = levelNumber <= 10 ? rng.nextInt(0, 1) : rng.nextInt(1, Math.min(3, Math.floor(levelNumber / 20) + 1));
+      
+      const availableGates = getAvailableGates(levelNumber);
+      const positiveGates = availableGates.filter(isGateBeneficial);
+      const negativeGates = availableGates.filter(g => !isGateBeneficial(g));
+      
+      const usedOperations: string[] = [];
 
       for (let g = 0; g < gateCount; g++) {
         let tFinal = 0.5;
         if (gateCount === 1) {
-          // Force single gates away from the exact center (0.5) to avoid overlap on 'X' crossing paths
-          // Use the index or sum of IDs to deterministically pick 35% or 65% of the way
           const sum = (from.id.length + to.id.length + i + j) % 2;
           tFinal = sum === 0 ? 0.35 : 0.65;
         } else {
@@ -175,13 +194,43 @@ export function generateLevel(levelNumber: number): LevelConfig {
           tFinal = Math.max(0.2, Math.min(0.8, t + jitter));
         }
 
+        // Choose positive with 70% probability
+        const isPositive = rng.next() < 0.7;
+        let pool = isPositive ? positiveGates : negativeGates;
+        if (pool.length === 0) pool = availableGates;
+
+        // Pick an operation and ensure it doesn't neutralize existing ones on this path
+        let op = rng.pick(pool);
+        
+        // Anti-neutralization logic: if we have x2, don't pick /2 (and vice versa)
+        const getInverse = (o: GateOperation): GateOperation | null => {
+          if (o === 'x2') return '/2';
+          if (o === '/2') return 'x2';
+          if (o === 'x3') return '/3';
+          if (o === '/3') return 'x3';
+          if (o === '+5') return '-5';
+          if (o === '-5') return '+5';
+          if (o === '+10') return '-10';
+          if (o === '-10') return '+10';
+          return null;
+        };
+
+        const inverse = getInverse(op);
+        if (inverse && usedOperations.includes(inverse)) {
+          // Try to pick another from the same pool once
+          op = rng.pick(pool);
+        }
+
+        usedOperations.push(op);
+
         pathGates.push({
           id: `gate-${pathId}-${g}`,
-          operation: rng.pick(gates),
+          operation: op,
           position: {
             x: from.position.x + dx * tFinal,
             y: from.position.y + dy * tFinal,
           },
+          tPosition: tFinal, // Pre-calculated normalized position on path
           pathId,
         });
       }
@@ -198,7 +247,7 @@ export function generateLevel(levelNumber: number): LevelConfig {
 
   // ---------- Artillery (Level 21+) ----------
   const artillery: NeutralArtillery[] = [];
-  if (levelNumber >= 21) {
+  if (levelNumber >= 21 && !isLevel23) {
     const artilleryCount = levelNumber < 50 ? 1 : levelNumber < 100 ? rng.nextInt(1, 2) : rng.nextInt(1, 3);
     for (let i = 0; i < artilleryCount; i++) {
       artillery.push({
@@ -270,8 +319,8 @@ export function applyGateOperation(value: number, operation: GateOperation): num
     case 'x3': return value * 3;
     case '/2': return Math.max(1, Math.floor(value / 2));
     case '/3': return Math.max(1, Math.floor(value / 3));
+    case '+5': return value + 5;
     case '+10': return value + 10;
-    case '+20': return value + 20;
     case '-5': return Math.max(1, value - 5);
     case '-10': return Math.max(1, value - 10);
     default: return value;
@@ -285,8 +334,8 @@ export function getGateDisplayText(operation: GateOperation): string {
     case 'x3': return '×3';
     case '/2': return '÷2';
     case '/3': return '÷3';
+    case '+5': return '+5';
     case '+10': return '+10';
-    case '+20': return '+20';
     case '-5': return '-5';
     case '-10': return '-10';
     default: return operation;
@@ -295,5 +344,5 @@ export function getGateDisplayText(operation: GateOperation): string {
 
 // Check if an operation is beneficial
 export function isGateBeneficial(operation: GateOperation): boolean {
-  return ['x2', 'x3', '+10', '+20'].includes(operation);
+  return ['x2', 'x3', '+5', '+10'].includes(operation);
 }

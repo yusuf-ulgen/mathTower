@@ -155,4 +155,14 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     set({ gold: get().gold + amount });
     get().saveProgress();
   },
+
+  resetProgress: () => {
+    set({
+      currentLevel: 1,
+      gold: 0,
+      levelProgress: {},
+      researchUpgrades: DEFAULT_RESEARCH.map((r) => ({ ...r })),
+    });
+    get().saveProgress();
+  },
 }));

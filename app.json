@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Math Tower Hero",
+    "name": "Math Tower",
     "slug": "math-tower-hero",
-    "version": "1.0.2",
+    "version": "1.0.4",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.yusufulgen.mathtower",
-      "versionCode": 9,
+      "versionCode": 11,
       "targetSdkVersion": 35,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

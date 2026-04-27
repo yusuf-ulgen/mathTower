@@ -39,6 +39,8 @@ interface AttackQueue {
   fromTowerId: string;
   toTowerId: string;
   remainingUnits: number;
+  unitValue: number;
+  lastUnitValue: number;
   unitColor: TowerColor;
   spawnTimer: number;
   pathId: string;
@@ -156,12 +158,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!path) return;
 
     // Send all units (keep at least 1)
-    const unitsToSend = fromTower.unitCount - 1;
-    if (unitsToSend <= 0) return;
+    const totalToSend = fromTower.unitCount - 1;
+    if (totalToSend <= 0) return;
+
+    // BATCHING LOGIC for performance
+    let unitValue = 1;
+    if (totalToSend < 10) unitValue = 2;
+    else if (totalToSend < 20) unitValue = 4;
+    else if (totalToSend < 50) unitValue = 10;
+    else unitValue = 20;
+
+    const remainingUnits = Math.floor(totalToSend / unitValue);
+    const lastUnitValue = totalToSend % unitValue;
+    const totalActualUnits = remainingUnits + (lastUnitValue > 0 ? 1 : 0);
 
     // Decrease tower count immediately
     const newTowers = towers.map((t) =>
-      t.id === fromTowerId ? { ...t, unitCount: t.unitCount - unitsToSend } : t
+      t.id === fromTowerId ? { ...t, unitCount: t.unitCount - totalToSend } : t
     );
 
     // Create attack queue
@@ -169,7 +182,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       id: `aq-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       fromTowerId,
       toTowerId,
-      remainingUnits: unitsToSend,
+      remainingUnits: totalActualUnits,
+      unitValue: unitValue,
+      lastUnitValue: lastUnitValue,
       unitColor: fromTower.color,
       spawnTimer: 0,
       pathId: path.id,
@@ -278,18 +293,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       while (q.spawnTimer >= GAME.UNIT_SPAWN_INTERVAL && q.remainingUnits > 0) {
         q.spawnTimer -= GAME.UNIT_SPAWN_INTERVAL;
+        
+        // Determine the value for this unit
+        let spawnValue = q.unitValue;
+        if (q.remainingUnits === 1 && q.lastUnitValue > 0) {
+          spawnValue = q.lastUnitValue;
+        }
+        
         q.remainingUnits--;
 
-        const fromTower = towers.find((t) => t.id === q.fromTowerId);
-        const toTower = towers.find((t) => t.id === q.toTowerId);
-        if (fromTower && toTower) {
+        // PERFORMANCE OPTIMIZATION: Merge with existing unit if close to start
+        const existingUnitIdx = movingUnits.findIndex(u => 
+          u.fromTowerId === q.fromTowerId && 
+          u.toTowerId === q.toTowerId && 
+          u.progress < 0.1 &&
+          u.color === q.unitColor
+        );
+
+        if (existingUnitIdx !== -1) {
+          movingUnits[existingUnitIdx] = {
+            ...movingUnits[existingUnitIdx],
+            value: movingUnits[existingUnitIdx].value + spawnValue
+          };
+        } else {
           movingUnits.push({
             id: generateUnitId(),
             color: q.unitColor,
             fromTowerId: q.fromTowerId,
             toTowerId: q.toTowerId,
             progress: 0,
-            value: 1,
+            value: spawnValue,
             speed: 1,
             passedGates: [],
           });
@@ -306,29 +339,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const arrivedUnits: MovingUnit[] = [];
     const activeUnits: MovingUnit[] = [];
 
-    for (const unit of movingUnits) {
-      const path = state.paths.find((p) => {
-        return (
-          (p.fromTowerId === unit.fromTowerId && p.toTowerId === unit.toTowerId) ||
-          (p.fromTowerId === unit.toTowerId && p.toTowerId === unit.fromTowerId)
-        );
-      });
+    const icyGround = state.activeHazards.includes('icyGround');
+    
+    // Path map for O(1) lookup
+    const pathMap: { [key: string]: AttackPath } = {};
+    state.paths.forEach(p => {
+      const key1 = `${p.fromTowerId}-${p.toTowerId}`;
+      const key2 = `${p.toTowerId}-${p.fromTowerId}`;
+      pathMap[key1] = p;
+      pathMap[key2] = p;
+    });
 
+    for (const unit of movingUnits) {
+      const path = pathMap[`${unit.fromTowerId}-${unit.toTowerId}`];
       if (!path) {
         activeUnits.push(unit);
         continue;
       }
 
-      const fromTower = towers.find((t) => t.id === unit.fromTowerId);
-      const toTower = towers.find((t) => t.id === unit.toTowerId);
-
-      if (!fromTower || !toTower) {
-        activeUnits.push(unit);
-        continue;
-      }
-
-      const icyGround = state.activeHazards.includes('icyGround');
-      const result = tickUnit(unit, path, fromTower, toTower, dt, icyGround);
+      const result = tickUnit(unit, path, dt, icyGround);
 
       if (result.arrived) {
         arrivedUnits.push(result.unit);
@@ -456,16 +485,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
           if (target && target.color !== enemy.color && enemy.unitCount > target.unitCount * 1.3) {
             // Enemy sends all units (keep 1)
-            const unitsToSend = enemy.unitCount - 1;
+            const totalToSend = enemy.unitCount - 1;
             towers = towers.map((t) =>
-              t.id === enemy.id ? { ...t, unitCount: t.unitCount - unitsToSend } : t
+              t.id === enemy.id ? { ...t, unitCount: t.unitCount - totalToSend } : t
             );
+
+            // BATCHING LOGIC for enemy AI
+            let unitValue = 1;
+            if (totalToSend < 10) unitValue = 2;
+            else if (totalToSend < 20) unitValue = 4;
+            else if (totalToSend < 50) unitValue = 10;
+            else unitValue = 20;
+
+            const remainingUnits = Math.floor(totalToSend / unitValue);
+            const lastUnitValue = totalToSend % unitValue;
+            const totalActualUnits = remainingUnits + (lastUnitValue > 0 ? 1 : 0);
 
             attackQueues.push({
               id: `eq-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
               fromTowerId: enemy.id,
               toTowerId: targetId,
-              remainingUnits: unitsToSend,
+              remainingUnits: totalActualUnits,
+              unitValue: unitValue,
+              lastUnitValue: lastUnitValue,
               unitColor: enemy.color,
               spawnTimer: 0,
               pathId: path.id,

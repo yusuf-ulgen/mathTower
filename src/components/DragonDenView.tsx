@@ -20,36 +20,20 @@ interface Props {
   den: DragonDen;
 }
 
-export const DragonDenView: React.FC<Props> = ({ den }) => {
-  const eyeGlow = useSharedValue(0.3);
-  const breathAnim = useSharedValue(0);
+export const DragonDenView: React.FC<Props> = React.memo(({ den }) => {
+  const pulseAnim = useSharedValue(0.5);
 
   useEffect(() => {
-    eyeGlow.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.3, { duration: 800, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      true
-    );
-    breathAnim.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 2000 }),
-        withTiming(0, { duration: 2000 })
-      ),
+    pulseAnim.value = withRepeat(
+      withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
       -1,
       true
     );
   }, []);
 
-  const eyeStyle = useAnimatedStyle(() => ({
-    opacity: eyeGlow.value,
-  }));
-
-  const smokeStyle = useAnimatedStyle(() => ({
-    opacity: breathAnim.value * 0.4,
-    transform: [{ translateY: -breathAnim.value * 10 }, { scale: 1 + breathAnim.value * 0.5 }],
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: pulseAnim.value * 0.4 + 0.2,
+    transform: [{ scale: pulseAnim.value * 1.2 }],
   }));
 
   return (
@@ -57,43 +41,31 @@ export const DragonDenView: React.FC<Props> = ({ den }) => {
       style={[
         styles.container,
         {
-          left: den.position.x - 40,
-          top: den.position.y - 40,
+          left: den.position.x - 45,
+          top: den.position.y - 45,
         },
       ]}
     >
-      {/* Smoke */}
-      <Animated.View style={[styles.smoke, smokeStyle]}>
-        <View style={styles.smokeCloud1} />
-        <View style={styles.smokeCloud2} />
-      </Animated.View>
-
-      {/* Cave/Den structure */}
-      <View style={styles.cave}>
-        {/* Cave opening */}
-        <View style={styles.caveOpening}>
-          {/* Eyes */}
-          <View style={styles.eyeRow}>
-            <Animated.View style={[styles.eye, eyeStyle]} />
-            <Animated.View style={[styles.eye, eyeStyle]} />
-          </View>
-        </View>
-
-        {/* Rocky sides */}
-        <View style={styles.rockLeft} />
-        <View style={styles.rockRight} />
-        <View style={styles.rockTop} />
+      <Animated.View style={[styles.outerGlow, glowStyle]} />
+      
+      {/* Stone Cave Shape */}
+      <View style={styles.caveBack}>
+        <View style={styles.stone1} />
+        <View style={styles.stone2} />
+        <View style={styles.stone3} />
       </View>
 
-      {/* Bones decoration */}
-      <View style={styles.bones}>
-        <View style={styles.bone} />
-        <View style={[styles.bone, { transform: [{ rotate: '60deg' }] }]} />
+      {/* Dark Entrance */}
+      <View style={styles.entrance}>
+        <View style={styles.eyeRow}>
+          <View style={styles.eye} />
+          <View style={styles.eye} />
+        </View>
       </View>
 
       {/* Label */}
       <View style={styles.labelBadge}>
-        <Text style={styles.labelText}>🐉 EJDERHA İNİ</Text>
+        <Text style={styles.labelText}>🐉 EJDERHA YUVASI</Text>
       </View>
 
       {/* Power indicator */}
@@ -102,130 +74,116 @@ export const DragonDenView: React.FC<Props> = ({ den }) => {
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    width: 80,
-    height: 80,
+    width: 90,
+    height: 90,
     alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 8,
   },
-  smoke: {
+  outerGlow: {
     position: 'absolute',
-    top: -20,
-    flexDirection: 'row',
-    gap: 5,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 69, 0, 0.15)',
   },
-  smokeCloud1: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: 'rgba(100, 100, 100, 0.5)',
-  },
-  smokeCloud2: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(100, 100, 100, 0.3)',
-    marginTop: 4,
-  },
-  cave: {
+  caveBack: {
     width: 70,
     height: 50,
-    borderRadius: 8,
-    backgroundColor: '#2D1B0E',
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  caveOpening: {
-    width: 40,
-    height: 30,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    backgroundColor: '#000',
+    backgroundColor: '#4A4A4A',
+    borderRadius: 35,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    borderWidth: 2,
+    borderColor: '#333',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 0,
+  },
+  stone1: {
+    position: 'absolute',
+    top: -10,
+    left: 10,
+    width: 20,
+    height: 15,
+    backgroundColor: '#5A5A5A',
+    borderRadius: 8,
+  },
+  stone2: {
+    position: 'absolute',
+    top: -5,
+    right: 5,
+    width: 25,
+    height: 20,
+    backgroundColor: '#3F3F3F',
+    borderRadius: 10,
+  },
+  stone3: {
+    position: 'absolute',
+    bottom: 5,
+    left: -5,
+    width: 30,
+    height: 15,
+    backgroundColor: '#555',
+    borderRadius: 7,
+  },
+  entrance: {
+    position: 'absolute',
+    bottom: 20,
+    width: 34,
+    height: 24,
+    backgroundColor: '#1A1A1A',
+    borderTopLeftRadius: 17,
+    borderTopRightRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#000',
   },
   eyeRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: -4,
+    gap: 8,
+    marginTop: 4,
   },
   eye: {
-    width: 8,
+    width: 5,
     height: 5,
-    borderRadius: 4,
-    backgroundColor: '#FF4500',
-  },
-  rockLeft: {
-    position: 'absolute',
-    left: 0,
-    bottom: 0,
-    width: 20,
-    height: 25,
-    backgroundColor: '#5C4033',
-    borderTopRightRadius: 10,
-  },
-  rockRight: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    width: 20,
-    height: 25,
-    backgroundColor: '#5C4033',
-    borderTopLeftRadius: 10,
-  },
-  rockTop: {
-    position: 'absolute',
-    top: 0,
-    width: 50,
-    height: 12,
-    backgroundColor: '#5C4033',
-    borderBottomLeftRadius: 5,
-    borderBottomRightRadius: 5,
-  },
-  bones: {
-    position: 'absolute',
-    bottom: -5,
-    left: 5,
-    flexDirection: 'row',
-  },
-  bone: {
-    width: 15,
-    height: 2,
-    backgroundColor: '#D3D3C0',
-    borderRadius: 1,
-    marginLeft: -5,
+    borderRadius: 2.5,
+    backgroundColor: '#FF3300',
   },
   labelBadge: {
     position: 'absolute',
-    bottom: -20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 6,
+    bottom: -25,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   labelText: {
-    color: '#FF4500',
-    fontSize: 8,
+    color: '#FFD700',
+    fontSize: 9,
     fontWeight: '900',
   },
   powerBadge: {
     position: 'absolute',
-    top: -10,
-    right: -5,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 4,
+    top: -15,
+    right: -10,
+    backgroundColor: 'rgba(220, 20, 60, 0.9)',
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFF',
   },
   powerText: {
     color: '#FFF',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 'bold',
   },
 });

@@ -1,8 +1,3 @@
-// =============================================
-// MATH TOWER WAR — War Themed Background
-// Atmospheric starry night / magical battlefield
-// =============================================
-
 import React, { useMemo } from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import Animated, {
@@ -43,14 +38,20 @@ const StarParticle = ({ startX, startY, size, duration, delay }: {
     width: size,
     height: size,
     borderRadius: size / 2,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FFF',
   }));
 
-  return <Animated.View style={animatedStyle} />;
+  return (
+    <Animated.View 
+      style={animatedStyle} 
+      renderToHardwareTextureAndroid={true}
+      shouldRasterizeIOS={true}
+    />
+  );
 };
 
 export const Background = React.memo(() => {
-  // Generate 40 random stars statically so they don't jump on re-renders
+  // Generate stars
   const particles = useMemo(() => {
     return Array.from({ length: 40 }).map((_, i) => ({
       id: i,
@@ -81,7 +82,7 @@ export const Background = React.memo(() => {
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0a0e1a', // Deep magical night sky
+    backgroundColor: '#0a0e1a', // Original deep black/blue theme
   },
 });
 

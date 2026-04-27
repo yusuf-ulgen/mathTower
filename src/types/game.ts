@@ -6,7 +6,7 @@
 export type TowerColor = 'blue' | 'red' | 'purple' | 'yellow' | 'neutral';
 
 // Math gate operations placed on paths
-export type GateOperation = 'x2' | '/2' | '+10' | '-5' | '+20' | 'x3' | '/3' | '-10';
+export type GateOperation = 'x2' | '/2' | '+5' | '-5' | '+10' | 'x3' | '/3' | '-10';
 
 // Environmental hazards
 export type HazardType = 'nightMode' | 'icyGround';

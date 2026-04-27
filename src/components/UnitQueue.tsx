@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
+  SharedValue,
 } from 'react-native-reanimated';
 import { useGameStore } from '../store/useGameStore';
 import { SpartanUnit } from './SpartanUnit';
@@ -36,7 +37,8 @@ const AnimatedUnit: React.FC<{
   unit: MovingUnit;
   fromTower: Tower | undefined;
   toTower: Tower | undefined;
-}> = React.memo(({ unit, fromTower, toTower }) => {
+  bobValue: SharedValue<number>;
+}> = React.memo(({ unit, fromTower, toTower, bobValue }) => {
   const pos = getUnitWorldPosition(unit, fromTower, toTower);
   if (!pos) return null;
 
@@ -45,29 +47,32 @@ const AnimatedUnit: React.FC<{
     ? toTower.position.x < fromTower.position.x
     : false;
 
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: pos.x - 8 },
+      { translateY: pos.y - 8 },
+      { scaleX: facingLeft ? -1 : 1 }
+    ],
+  }));
+
   return (
-    <View
-      style={[
-        styles.unitContainer,
-        {
-          left: pos.x - 8,
-          top: pos.y - 8,
-          transform: [{ scaleX: facingLeft ? -1 : 1 }],
-        },
-      ]}
+    <Animated.View 
+      style={[styles.unitContainer, animatedStyle]}
+      renderToHardwareTextureAndroid={true}
+      shouldRasterizeIOS={true}
     >
       <SpartanUnit
         color={unit.color}
-        size={20}
+        size={14}
         isMoving={true}
         value={unit.value > 1 ? unit.value : undefined}
       />
-    </View>
+    </Animated.View>
   );
 });
 
 // The full queue renderer
-export const UnitQueue: React.FC = () => {
+export const UnitQueue: React.FC<{ bobValue: SharedValue<number> }> = React.memo(({ bobValue }) => {
   const movingUnits = useGameStore((state) => state.movingUnits);
   const towers = useGameStore((state) => state.towers);
 
@@ -80,12 +85,12 @@ export const UnitQueue: React.FC = () => {
     return map;
   }, [towers]);
 
-  // Limit rendered units for performance (max 150 since rendering is lightweight now)
+  // Limit rendered units for performance (max 50 for rock-solid performance)
   const visibleUnits = useMemo(() => {
-    if (movingUnits.length <= 150) return movingUnits;
+    if (movingUnits.length <= 50) return movingUnits;
     const playerUnits = movingUnits.filter((u) => u.color === 'blue');
     const enemyUnits = movingUnits.filter((u) => u.color !== 'blue');
-    const maxEnemy = Math.max(10, 150 - playerUnits.length);
+    const maxEnemy = Math.max(10, 50 - playerUnits.length);
     return [...playerUnits, ...enemyUnits.slice(0, maxEnemy)];
   }, [movingUnits]);
 
@@ -97,11 +102,12 @@ export const UnitQueue: React.FC = () => {
           unit={unit}
           fromTower={towerMap[unit.fromTowerId]}
           toTower={towerMap[unit.toTowerId]}
+          bobValue={bobValue}
         />
       ))}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   unitContainer: {

@@ -5,7 +5,16 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Dimensions } from 'react-native';
-import Animated, { FadeIn, FadeInUp, FadeOut } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  FadeOut,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { COLORS, SPACING } from '../constants/theme';
 import { TR } from '../constants/strings';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,71 +32,155 @@ import { getTowerUpgradeCost } from '../engine/gameEngine';
 import { calculateStars } from '../engine/gameEngine';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-const TICK_INTERVAL = 50; // 20 fps game logic
+const TICK_INTERVAL = 80; // Optimize: Slightly lower tick rate to reduce bridge traffic
+
+// --- Optimized Tower Layer ---
+const TowerLayer: React.FC<{ 
+  onTap: (id: string) => void, 
+  onLongPress: (id: string) => void,
+  selectedTowerId: string | null,
+  hasNight: boolean
+}> = React.memo(({ onTap, onLongPress, selectedTowerId, hasNight }) => {
+  const towers = useGameStore(s => s.towers);
+  const playerTowers = React.useMemo(() => towers.filter(t => t.color === 'blue'), [towers]);
+
+  return (
+    <>
+      {towers.map((tower) => (
+        <BattleTower
+          key={tower.id}
+          tower={tower}
+          onTap={onTap}
+          onLongPress={onLongPress}
+          isSelected={selectedTowerId === tower.id}
+          isNightHidden={
+            hasNight &&
+            tower.color !== 'blue' &&
+            !playerTowers.some((pt) => {
+              const dx = pt.position.x - tower.position.x;
+              const dy = pt.position.y - tower.position.y;
+              return Math.sqrt(dx * dx + dy * dy) < 120;
+            })
+          }
+        />
+      ))}
+    </>
+  );
+});
+
+// --- Optimized Gate Layer ---
+const GateLayer: React.FC = React.memo(() => {
+  const paths = useGameStore(s => s.paths);
+  const allGates = React.useMemo(() => paths.flatMap((p) => p.gates), [paths]);
+
+  return (
+    <>
+      {allGates.map((gate) => (
+        <MathGateView key={gate.id} gate={gate} />
+      ))}
+    </>
+  );
+});
+
+// --- Optimized Artillery Layer ---
+const ArtilleryLayer: React.FC = React.memo(() => {
+  const artillery = useGameStore(s => s.artillery);
+  const disableArtillery = useGameStore(s => s.disableArtillery);
+
+  return (
+    <>
+      {artillery.map((art) => (
+        <ArtilleryView
+          key={art.id}
+          artillery={art}
+          onDisable={disableArtillery}
+        />
+      ))}
+    </>
+  );
+});
+
+// --- Optimized Dragon Den Layer ---
+const DragonDenLayer: React.FC = React.memo(() => {
+  const dragonDens = useGameStore(s => s.dragonDens);
+
+  return (
+    <>
+      {dragonDens.map((den) => (
+        <DragonDenView key={den.id} den={den} />
+      ))}
+    </>
+  );
+});
+
+// --- Optimized HUD ---
+const BattleHUD: React.FC<{ 
+  onPause: () => void,
+  insets: any
+}> = React.memo(({ onPause, insets }) => {
+  const selectedLevel = useGameStore(s => s.selectedLevel);
+  const elapsedTime = useGameStore(s => s.elapsedTime);
+  const isPaused = useGameStore(s => s.isPaused);
+  const levelConfig = useGameStore(s => s.levelConfig);
+
+  return (
+    <View style={[styles.hud, { paddingTop: Math.max(insets.top, 20) }]}>
+      <View style={styles.hudLeft}>
+        <Text style={styles.levelLabel}>{TR.LEVEL} {selectedLevel}</Text>
+        {levelConfig && selectedLevel % 10 === 0 && selectedLevel >= 10 && (
+          <Text style={styles.bossTag}>👑 {TR.BOSS_LEVEL}</Text>
+        )}
+      </View>
+
+      <View style={styles.hudCenter}>
+        <Text style={styles.timeText}>{Math.floor(elapsedTime)}s</Text>
+        <View style={styles.starsRow}>
+          {[1, 2, 3].map((s) => (
+            <Text key={s} style={[styles.starIcon, elapsedTime <= (levelConfig?.starThresholds[s === 1 ? 'oneStar' : s === 2 ? 'twoStar' : 'threeStar'] || 999) && styles.starActive]}>
+              ★
+            </Text>
+          ))}
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.pauseButton} onPress={onPause}>
+        <Text style={styles.pauseText}>{isPaused ? '▶' : '⏸'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
 
 export const BattleScreen: React.FC = () => {
-  const {
-    towers,
-    paths,
-    movingUnits,
-    artillery,
-    dragonDens,
-    activeHazards,
-    isPlaying,
-    isPaused,
-    isVictory,
-    isDefeat,
-    elapsedTime,
-    goldEarned,
-    selectedLevel,
-    levelConfig,
-    sendAttack,
-    upgradeTower,
-    disableArtillery,
-    tick,
-    pauseGame,
-    resumeGame,
-    endBattle,
-    setScreen,
-    startLevel,
-  } = useGameStore((state) => ({
-    towers: state.towers,
-    paths: state.paths,
-    movingUnits: state.movingUnits,
-    artillery: state.artillery,
-    dragonDens: state.dragonDens,
-    activeHazards: state.activeHazards,
-    isPlaying: state.isPlaying,
-    isPaused: state.isPaused,
-    isVictory: state.isVictory,
-    isDefeat: state.isDefeat,
-    elapsedTime: state.elapsedTime,
-    goldEarned: state.goldEarned,
-    selectedLevel: state.selectedLevel,
-    levelConfig: state.levelConfig,
-    sendAttack: state.sendAttack,
-    upgradeTower: state.upgradeTower,
-    disableArtillery: state.disableArtillery,
-    tick: state.tick,
-    pauseGame: state.pauseGame,
-    resumeGame: state.resumeGame,
-    endBattle: state.endBattle,
-    setScreen: state.setScreen,
-    startLevel: state.startLevel,
-  }));
+  const isPlaying = useGameStore(s => s.isPlaying);
+  const isPaused = useGameStore(s => s.isPaused);
+  const isVictory = useGameStore(s => s.isVictory);
+  const isDefeat = useGameStore(s => s.isDefeat);
+  const activeHazards = useGameStore(s => s.activeHazards);
+  const goldEarned = useGameStore(s => s.goldEarned);
+  const elapsedTime = useGameStore(s => s.elapsedTime);
+  const selectedLevel = useGameStore(s => s.selectedLevel);
+  const levelConfig = useGameStore(s => s.levelConfig);
+
+  const { tick, pauseGame, resumeGame, endBattle, setScreen, startLevel, sendAttack, upgradeTower } = useGameStore();
 
   const insets = useSafeAreaInsets();
-
-  const { getProductionBonus, getArtilleryResistance, completeLevel, getStartingUnitsBonus } =
-    useProgressStore((s) => ({
-      getProductionBonus: s.getProductionBonus,
-      getArtilleryResistance: s.getArtilleryResistance,
-      completeLevel: s.completeLevel,
-      getStartingUnitsBonus: s.getStartingUnitsBonus,
-    }));
+  const { getProductionBonus, getArtilleryResistance, completeLevel, getStartingUnitsBonus } = useProgressStore();
 
   const [selectedTowerId, setSelectedTowerId] = useState<string | null>(null);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const globalBobAnim = useSharedValue(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    globalBobAnim.value = withRepeat(
+      withSequence(
+        withTiming(-3, { duration: 250, easing: Easing.out(Easing.quad) }),
+        withTiming(0, { duration: 250, easing: Easing.in(Easing.quad) })
+      ),
+      -1,
+      true
+    );
+  }, []);
 
   // Game loop
   useEffect(() => {
@@ -116,72 +209,42 @@ export const BattleScreen: React.FC = () => {
     }
   }, [isVictory]);
 
-  // Tower tap handler
   const handleTowerTap = (towerId: string) => {
+    const towers = useGameStore.getState().towers; // Atomic access
     const tower = towers.find((t) => t.id === towerId);
     if (!tower) return;
 
     if (tower.color === 'blue') {
       if (selectedTowerId === towerId) {
-        // Double tap own tower = upgrade
         upgradeTower(towerId);
         setSelectedTowerId(null);
       } else {
-        // Select own tower
         setSelectedTowerId(towerId);
       }
-    } else {
-      // Tap enemy tower while own tower selected = attack
-      if (selectedTowerId) {
-        sendAttack(selectedTowerId, towerId);
-        setSelectedTowerId(null);
-      }
+    } else if (selectedTowerId) {
+      sendAttack(selectedTowerId, towerId);
+      setSelectedTowerId(null);
     }
   };
 
   const handleTowerLongPress = (towerId: string) => {
+    const towers = useGameStore.getState().towers;
     const tower = towers.find((t) => t.id === towerId);
     if (tower && tower.color === 'blue') {
       upgradeTower(towerId);
     }
   };
 
-  const playerTowers = towers.filter((t) => t.color === 'blue');
-  const stars = levelConfig ? calculateStars(elapsedTime, levelConfig.starThresholds) : 0;
   const hasNight = activeHazards.includes('nightMode');
-
-  // All gates from all paths
-  const allGates = paths.flatMap((p) => p.gates);
+  const stars = levelConfig ? calculateStars(elapsedTime, levelConfig.starThresholds) : 0;
 
   return (
     <View style={styles.container}>
       {/* HUD Header */}
-      <View style={[styles.hud, { paddingTop: Math.max(insets.top, 20) }]}>
-        <View style={styles.hudLeft}>
-          <Text style={styles.levelLabel}>{TR.LEVEL} {selectedLevel}</Text>
-          {levelConfig && selectedLevel % 10 === 0 && selectedLevel >= 10 && (
-            <Text style={styles.bossTag}>👑 {TR.BOSS_LEVEL}</Text>
-          )}
-        </View>
-
-        <View style={styles.hudCenter}>
-          <Text style={styles.timeText}>{Math.floor(elapsedTime)}s</Text>
-          <View style={styles.starsRow}>
-            {[1, 2, 3].map((s) => (
-              <Text key={s} style={[styles.starIcon, elapsedTime <= (levelConfig?.starThresholds[s === 1 ? 'oneStar' : s === 2 ? 'twoStar' : 'threeStar'] || 999) && styles.starActive]}>
-                ★
-              </Text>
-            ))}
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.pauseButton}
-          onPress={() => (isPaused ? resumeGame() : pauseGame())}
-        >
-          <Text style={styles.pauseText}>{isPaused ? '▶' : '⏸'}</Text>
-        </TouchableOpacity>
-      </View>
+      <BattleHUD 
+        onPause={() => (isPaused ? resumeGame() : pauseGame())} 
+        insets={insets} 
+      />
 
       {/* Hazard indicators */}
       {activeHazards.length > 0 && (
@@ -199,54 +262,18 @@ export const BattleScreen: React.FC = () => {
       {/* Battlefield */}
       <View style={styles.battlefield}>
         <Background />
-        
-        {/* SVG Attack Lines */}
         <AttackLines />
-
-        {/* Math Gates */}
-        {allGates.map((gate) => (
-          <MathGateView key={gate.id} gate={gate} />
-        ))}
-
-        {/* Artillery */}
-        {artillery.map((art) => (
-          <ArtilleryView
-            key={art.id}
-            artillery={art}
-            onDisable={disableArtillery}
-          />
-        ))}
-
-        {/* Dragon Dens */}
-        {dragonDens.map((den) => (
-          <DragonDenView key={den.id} den={den} />
-        ))}
-
-        {/* Towers */}
-        {towers.map((tower) => (
-          <BattleTower
-            key={tower.id}
-            tower={tower}
-            onTap={handleTowerTap}
-            onLongPress={handleTowerLongPress}
-            isSelected={selectedTowerId === tower.id}
-            isNightHidden={
-              hasNight &&
-              tower.color !== 'blue' &&
-              !playerTowers.some((pt) => {
-                const dx = pt.position.x - tower.position.x;
-                const dy = pt.position.y - tower.position.y;
-                return Math.sqrt(dx * dx + dy * dy) < 120;
-              })
-            }
-          />
-        ))}
-
-        {/* Moving Units */}
-        <UnitQueue />
-
-        {/* Hazard overlays */}
-        <HazardOverlay hazards={activeHazards} playerTowers={playerTowers} />
+        <GateLayer />
+        <ArtilleryLayer />
+        <DragonDenLayer />
+        <TowerLayer 
+          onTap={handleTowerTap}
+          onLongPress={handleTowerLongPress}
+          selectedTowerId={selectedTowerId}
+          hasNight={hasNight}
+        />
+        <UnitQueue bobValue={globalBobAnim} />
+        <HazardOverlay hazards={activeHazards} playerTowers={useGameStore.getState().towers.filter(t => t.color === 'blue')} />
       </View>
 
       {/* Selection hint */}
@@ -264,19 +291,40 @@ export const BattleScreen: React.FC = () => {
       {/* Pause Overlay */}
       {isPaused && (
         <Animated.View entering={FadeIn} style={styles.overlay}>
-          <Text style={styles.overlayTitle}>{TR.PAUSE}</Text>
-          <TouchableOpacity style={styles.overlayButton} onPress={resumeGame}>
-            <Text style={styles.overlayButtonText}>{TR.RESUME}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.overlayButton, styles.secondaryBtn]}
-            onPress={() => {
-              endBattle();
-              setScreen('menu');
-            }}
-          >
-            <Text style={styles.secondaryBtnText}>{TR.BACK_TO_MENU}</Text>
-          </TouchableOpacity>
+          {!showExitConfirm ? (
+            <>
+              <Text style={styles.overlayTitle}>{TR.PAUSE}</Text>
+              <TouchableOpacity style={styles.overlayButton} onPress={resumeGame}>
+                <Text style={styles.overlayButtonText}>{TR.RESUME}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.overlayButton, styles.secondaryBtn]}
+                onPress={() => setShowExitConfirm(true)}
+              >
+                <Text style={styles.secondaryBtnText}>{TR.BACK_TO_MENU}</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.overlayTitle}>Emin misiniz?</Text>
+              <Text style={styles.overlaySubtitle}>Mevcut ilerleme kaybolacak.</Text>
+              <TouchableOpacity
+                style={[styles.overlayButton, { backgroundColor: COLORS.danger }]}
+                onPress={() => {
+                  endBattle();
+                  setScreen('menu');
+                }}
+              >
+                <Text style={styles.overlayButtonText}>{TR.CONFIRM}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.overlayButton, styles.secondaryBtn]}
+                onPress={() => setShowExitConfirm(false)}
+              >
+                <Text style={styles.secondaryBtnText}>{TR.CANCEL}</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </Animated.View>
       )}
 
@@ -367,7 +415,6 @@ const styles = StyleSheet.create({
     zIndex: 50,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
     backgroundColor: 'rgba(10, 14, 26, 0.85)',
@@ -476,7 +523,13 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '900',
     color: COLORS.text,
-    marginBottom: 20,
+    marginBottom: 10,
+  },
+  overlaySubtitle: {
+    fontSize: 16,
+    color: COLORS.textDim,
+    marginBottom: 30,
+    textAlign: 'center',
   },
   overlayButton: {
     backgroundColor: COLORS.primary,

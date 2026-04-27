@@ -82,8 +82,6 @@ export interface UnitTickResult {
 export function tickUnit(
   unit: MovingUnit,
   path: AttackPath,
-  fromTower: Tower,
-  toTower: Tower,
   dt: number,
   icyGround: boolean
 ): UnitTickResult {
@@ -94,33 +92,15 @@ export function tickUnit(
 
   const updatedUnit = { ...unit, progress: newProgress };
 
-  // Check if unit is moving forward or backward on path
-  const isReversed =
-    path.fromTowerId === toTower.id && path.toTowerId === fromTower.id;
-
   // Check gate collisions
   for (const gate of path.gates) {
     if (updatedUnit.passedGates.includes(gate.id)) continue;
 
-    // Calculate gate's normalized position on path
-    const fx = fromTower.position.x;
-    const fy = fromTower.position.y;
-    const tx = toTower.position.x;
-    const ty = toTower.position.y;
-    const dx = tx - fx;
-    const dy = ty - fy;
-    const pathLen = Math.sqrt(dx * dx + dy * dy);
-
-    // Gate position projected onto path
-    const gateVecX = gate.position.x - fx;
-    const gateVecY = gate.position.y - fy;
-    const gateT = Math.max(0, Math.min(1, (gateVecX * dx + gateVecY * dy) / (pathLen * pathLen)));
+    // Use pre-calculated t-position if available, otherwise fallback
+    const gateT = gate.tPosition !== undefined ? gate.tPosition : 0.5;
 
     // If unit has passed this gate's position
-    const unitT = isReversed ? 1 - updatedUnit.progress : updatedUnit.progress;
-    const prevT = isReversed ? 1 - unit.progress : unit.progress;
-
-    if (prevT < gateT && unitT >= gateT) {
+    if (unit.progress < gateT && newProgress >= gateT) {
       const oldValue = updatedUnit.value;
       updatedUnit.value = applyGateOperation(updatedUnit.value, gate.operation);
       updatedUnit.passedGates = [...updatedUnit.passedGates, gate.id];

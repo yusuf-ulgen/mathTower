@@ -26,7 +26,7 @@ interface Props {
   isNightHidden?: boolean;
 }
 
-export const BattleTower: React.FC<Props> = ({
+export const BattleTower: React.FC<Props> = React.memo(({
   tower,
   onTap,
   onLongPress,
@@ -35,20 +35,46 @@ export const BattleTower: React.FC<Props> = ({
 }) => {
   const colors = TOWER_COLORS[tower.color] || TOWER_COLORS.neutral;
   const pulseAnim = useSharedValue(1);
+  const flagAnim = useSharedValue(0);
+  const glimmerAnim = useSharedValue(0);
 
   React.useEffect(() => {
     pulseAnim.value = withRepeat(
-      withSequence(
-        withTiming(1.04, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
-      ),
+      withTiming(1.05, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
       -1,
       true
+    );
+
+    flagAnim.value = withRepeat(
+      withTiming(1, { duration: 800, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
+    );
+
+    glimmerAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 3000 }),
+        withTiming(0, { duration: 0 })
+      ),
+      -1,
+      false
     );
   }, []);
 
   const productionStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseAnim.value }],
+  }));
+
+  const glimmerStyle = useAnimatedStyle(() => ({
+    opacity: Math.max(0, 1 - Math.abs(glimmerAnim.value * 2 - 1)) * 0.3,
+    transform: [{ translateX: -50 + glimmerAnim.value * 150 }],
+  }));
+
+  const flagStyle = useAnimatedStyle(() => ({
+    transform: [
+      { skewY: `${flagAnim.value * 8}deg` },
+      { scaleX: 1 + flagAnim.value * 0.05 }
+    ],
   }));
 
   const towerScale = tower.isBoss ? 1.3 : 1;
@@ -69,67 +95,48 @@ export const BattleTower: React.FC<Props> = ({
         },
       ]}
     >
-      {/* Selection glow */}
       {isSelected && (
         <View style={[styles.selectionRing, { borderColor: colors.light }]} />
       )}
-
-      {/* Battlement / Crown */}
+      <View style={styles.flagPole}>
+        <Animated.View style={[styles.flag, { backgroundColor: colors.light }, flagStyle]} />
+      </View>
       <View style={styles.battlementRow}>
-        {[0, 1, 2, 3, 4].map((i) => (
+        {[0, 1, 2].map((i) => (
           <View key={i} style={[styles.merlon, { backgroundColor: colors.dark }]} />
         ))}
       </View>
-
-      {/* Tower Body */}
-      <View style={[styles.towerBody, { backgroundColor: colors.main, borderColor: colors.dark }]}>
-        {/* Windows */}
+      <View style={[styles.towerTop, { backgroundColor: colors.main, borderColor: colors.dark }]}>
         <View style={styles.windowRow}>
-          <View style={[styles.window, { borderColor: colors.dark }]} />
-          <View style={[styles.window, { borderColor: colors.dark }]} />
-          <View style={[styles.window, { borderColor: colors.dark }]} />
+          <View style={[styles.window, { backgroundColor: '#000' }]} />
         </View>
-
-        {/* Stone texture lines */}
-        <View style={[styles.stoneLine, { backgroundColor: colors.dark, top: '35%' }]} />
-        <View style={[styles.stoneLine, { backgroundColor: colors.dark, top: '60%' }]} />
       </View>
-
-      {/* Door */}
+      <View style={[styles.towerBody, { backgroundColor: colors.main, borderColor: colors.dark }]}>
+        <View style={styles.shading} />
+        <View style={[styles.stoneDetail, { top: '20%', left: '10%' }]} />
+        <View style={[styles.stoneDetail, { top: '40%', right: '15%' }]} />
+        <View style={[styles.stoneDetail, { top: '70%', left: '25%' }]} />
+        <Animated.View style={[styles.glimmer, glimmerStyle]} />
+      </View>
       <View style={[styles.doorArch, { borderColor: colors.dark }]}>
-        <View style={[styles.door, { backgroundColor: '#8B6914' }]} />
+        <View style={[styles.door, { backgroundColor: '#3D2B1F' }]} />
       </View>
-
-      {/* Base */}
       <View style={[styles.base, { backgroundColor: colors.dark }]} />
-
-      {/* Unit count badge */}
       <Animated.View style={[styles.unitBadge, { backgroundColor: colors.main }, productionStyle]}>
         <Text style={styles.unitCount}>
           {isNightHidden ? '?' : tower.unitCount}
         </Text>
       </Animated.View>
-
-      {/* Level indicator */}
       {tower.level > 1 && (
         <View style={[styles.levelBadge, { backgroundColor: COLORS.primary }]}>
-          <Text style={styles.levelText}>Lv.{tower.level}</Text>
+          <Text style={styles.levelText}>L{tower.level}</Text>
         </View>
       )}
-
-      {/* Upgrade indicator */}
       {canUpgrade && tower.unitCount >= upgradeCost && (
         <View style={styles.upgradeHint}>
-          <Text style={styles.upgradeText}>⬆</Text>
+          <Animated.Text style={[styles.upgradeText, productionStyle]}>⚡</Animated.Text>
         </View>
       )}
-
-      {/* Flag */}
-      <View style={styles.flagPole}>
-        <View style={[styles.flag, { backgroundColor: colors.light }]} />
-      </View>
-
-      {/* Boss crown */}
       {tower.isBoss && (
         <View style={styles.bossCrown}>
           <Text style={styles.crownEmoji}>👑</Text>
@@ -137,7 +144,7 @@ export const BattleTower: React.FC<Props> = ({
       )}
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -148,107 +155,130 @@ const styles = StyleSheet.create({
   },
   selectionRing: {
     position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 2,
     borderStyle: 'dashed',
-    top: -5,
-    left: -5,
+    top: -7,
+    left: -7,
     zIndex: -1,
+    opacity: 0.5,
   },
   battlementRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: 60,
+    width: 46,
     marginBottom: -1,
+    zIndex: 3,
   },
   merlon: {
-    width: 8,
-    height: 8,
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2,
+    width: 10,
+    height: 6,
+    borderTopLeftRadius: 1,
+    borderTopRightRadius: 1,
+  },
+  towerTop: {
+    width: 50,
+    height: 14,
+    borderWidth: 1.5,
+    borderBottomWidth: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
   },
   towerBody: {
-    width: 60,
-    height: 50,
-    borderWidth: 2,
+    width: 44,
+    height: 36,
+    borderWidth: 1.5,
     borderTopWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    zIndex: 1,
+  },
+  shading: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: '35%',
+    backgroundColor: 'rgba(0,0,0,0.12)',
+  },
+  glimmer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 10,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    transform: [{ skewX: '-20deg' }],
   },
   windowRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     width: '100%',
-    paddingHorizontal: 6,
   },
   window: {
-    width: 8,
-    height: 12,
-    backgroundColor: '#000',
-    borderRadius: 4,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    borderWidth: 1,
+    width: 5,
+    height: 6,
+    borderRadius: 1,
   },
-  stoneLine: {
+  stoneDetail: {
     position: 'absolute',
-    width: '100%',
-    height: 1,
-    opacity: 0.3,
+    width: 6,
+    height: 1.5,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 1,
   },
   doorArch: {
-    width: 20,
-    height: 16,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    borderWidth: 2,
+    width: 16,
+    height: 12,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderWidth: 1.5,
     borderBottomWidth: 0,
     overflow: 'hidden',
     marginTop: -1,
+    zIndex: 2,
   },
   door: {
     flex: 1,
-    marginTop: 2,
+    marginTop: 1.5,
   },
   base: {
-    width: 70,
-    height: 6,
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
+    width: 56,
+    height: 5,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+    zIndex: 0,
   },
   unitBadge: {
     position: 'absolute',
-    bottom: -18,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
-    minWidth: 35,
+    bottom: -20,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    minWidth: 28,
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   unitCount: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '900',
   },
   levelBadge: {
     position: 'absolute',
-    top: -14,
+    top: -8,
     right: -8,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 6,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 3,
+    borderRadius: 3,
   },
   levelText: {
     color: '#000',
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: '900',
   },
   upgradeHint: {
@@ -257,28 +287,29 @@ const styles = StyleSheet.create({
     left: -8,
   },
   upgradeText: {
-    fontSize: 16,
+    fontSize: 14,
   },
   flagPole: {
     position: 'absolute',
-    top: -18,
-    left: 30,
-    width: 2,
-    height: 18,
-    backgroundColor: '#666',
+    top: -20,
+    left: 38,
+    width: 1.5,
+    height: 20,
+    backgroundColor: '#333',
+    zIndex: 5,
   },
   flag: {
     position: 'absolute',
     top: 0,
-    left: 2,
-    width: 12,
+    left: 1.5,
+    width: 14,
     height: 8,
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
+    borderTopRightRadius: 1,
+    borderBottomRightRadius: 1,
   },
   bossCrown: {
     position: 'absolute',
-    top: -28,
+    top: -30,
     alignSelf: 'center',
   },
   crownEmoji: {
