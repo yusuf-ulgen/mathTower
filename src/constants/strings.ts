@@ -80,4 +80,12 @@ export const TR = {
   CANCEL: 'Vazgeç',
   LOADING: 'Yükleniyor...',
   TAP_TO_CONTINUE: 'Devam etmek için dokun',
+
+  // Tutorial
+  TUTORIAL_TITLE: 'NASIL OYNANIR?',
+  TUTORIAL_STEP_1: 'Sana ait (mavi) bir kaleye dokunarak seç.',
+  TUTORIAL_STEP_2: 'Saldırmak için düşman kalesine dokun.',
+  TUTORIAL_STEP_3: 'Kendi kalene tekrar dokunarak seviye atlatabilirsin.',
+  TUTORIAL_STEP_4: 'Yollardaki kapılar sayılarını artırır veya azaltır.',
+  TUTORIAL_GOT_IT: 'Anladım!',
 };

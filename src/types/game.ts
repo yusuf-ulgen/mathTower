@@ -41,6 +41,7 @@ export interface MathGate {
   operation: GateOperation;
   position: Position;  // position along the path for rendering
   pathId: string;      // which path this gate belongs to
+  tPosition?: number;  // pre-calculated normalized position on path (0 to 1)
 }
 
 // ===================
@@ -55,6 +56,7 @@ export interface MovingUnit {
   value: number;       // how many "units" this represents (can change via gates)
   speed: number;       // movement speed multiplier
   passedGates: string[]; // IDs of gates already passed
+  isReversed?: boolean;  // if unit is moving from toTowerId to fromTowerId relative to path definition
 }
 
 // ===================
@@ -162,6 +164,7 @@ export interface ProgressState {
   gold: number;
   levelProgress: { [levelNumber: number]: LevelProgress };
   researchUpgrades: ResearchUpgrade[];
+  hasSeenTutorial: boolean;
 }
 
 // ===================

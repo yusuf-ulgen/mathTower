@@ -316,6 +316,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
             value: movingUnits[existingUnitIdx].value + spawnValue
           };
         } else {
+          const path = state.paths.find(p => p.id === q.pathId);
+          const isReversed = path ? (q.fromTowerId === path.toTowerId) : false;
+
           movingUnits.push({
             id: generateUnitId(),
             color: q.unitColor,
@@ -325,6 +328,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             value: spawnValue,
             speed: 1,
             passedGates: [],
+            isReversed,
           });
         }
       }

@@ -68,6 +68,7 @@ export function spawnUnit(
     value: 1,
     speed: 1,
     passedGates: [],
+    isReversed,
   };
 }
 
@@ -97,7 +98,13 @@ export function tickUnit(
     if (updatedUnit.passedGates.includes(gate.id)) continue;
 
     // Use pre-calculated t-position if available, otherwise fallback
-    const gateT = gate.tPosition !== undefined ? gate.tPosition : 0.5;
+    let gateT = gate.tPosition !== undefined ? gate.tPosition : 0.5;
+
+    // If unit is reversed, it starts at path.toTowerId (t=1) and moves towards path.fromTowerId (t=0)
+    // Its progress (0 to 1) should be mapped to the path's t-coordinates
+    if (unit.isReversed) {
+      gateT = 1 - gateT;
+    }
 
     // If unit has passed this gate's position
     if (unit.progress < gateT && newProgress >= gateT) {

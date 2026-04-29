@@ -52,6 +52,7 @@ interface ProgressStore extends ProgressState {
   getProductionBonus: () => number;
   getArtilleryResistance: () => number;
   addGold: (amount: number) => void;
+  setHasSeenTutorial: (seen: boolean) => void;
 }
 
 export const useProgressStore = create<ProgressStore>((set, get) => ({
@@ -59,6 +60,7 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
   gold: 0,
   levelProgress: {},
   researchUpgrades: DEFAULT_RESEARCH.map((r) => ({ ...r })),
+  hasSeenTutorial: false,
 
   loadProgress: async () => {
     try {
@@ -70,6 +72,7 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
           gold: parsed.gold || 0,
           levelProgress: parsed.levelProgress || {},
           researchUpgrades: parsed.researchUpgrades || DEFAULT_RESEARCH.map((r) => ({ ...r })),
+          hasSeenTutorial: parsed.hasSeenTutorial || false,
         });
       }
     } catch (e) {
@@ -79,10 +82,10 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
 
   saveProgress: async () => {
     try {
-      const { currentLevel, gold, levelProgress, researchUpgrades } = get();
+      const { currentLevel, gold, levelProgress, researchUpgrades, hasSeenTutorial } = get();
       await AsyncStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ currentLevel, gold, levelProgress, researchUpgrades })
+        JSON.stringify({ currentLevel, gold, levelProgress, researchUpgrades, hasSeenTutorial })
       );
     } catch (e) {
       console.error('Failed to save progress:', e);
@@ -156,12 +159,18 @@ export const useProgressStore = create<ProgressStore>((set, get) => ({
     get().saveProgress();
   },
 
+  setHasSeenTutorial: (seen) => {
+    set({ hasSeenTutorial: seen });
+    get().saveProgress();
+  },
+
   resetProgress: () => {
     set({
       currentLevel: 1,
       gold: 0,
       levelProgress: {},
       researchUpgrades: DEFAULT_RESEARCH.map((r) => ({ ...r })),
+      hasSeenTutorial: false,
     });
     get().saveProgress();
   },

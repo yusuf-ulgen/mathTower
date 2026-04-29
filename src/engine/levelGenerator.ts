@@ -293,10 +293,10 @@ export function generateLevel(levelNumber: number): LevelConfig {
   const goldReward = isBossLevel ? baseGold * 3 : baseGold;
 
   // ---------- Star Thresholds (seconds) ----------
-  const baseTime = 30 + enemyCount * 15;
+  const baseTime = 15 + enemyCount * 5;
   const starThresholds = {
-    oneStar: baseTime * 2,
-    twoStar: baseTime * 1.3,
+    oneStar: baseTime * 2.5,
+    twoStar: baseTime * 1.5,
     threeStar: baseTime,
   };
 

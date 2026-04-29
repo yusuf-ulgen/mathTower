@@ -28,6 +28,7 @@ import { MathGateView } from '../components/MathGateView';
 import { ArtilleryView } from '../components/ArtilleryView';
 import { DragonDenView } from '../components/DragonDenView';
 import { HazardOverlay } from '../components/HazardOverlay';
+import { TutorialOverlay } from '../components/TutorialOverlay';
 import { getTowerUpgradeCost } from '../engine/gameEngine';
 import { calculateStars } from '../engine/gameEngine';
 
@@ -168,6 +169,7 @@ export const BattleScreen: React.FC = () => {
 
   const [selectedTowerId, setSelectedTowerId] = useState<string | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const globalBobAnim = useSharedValue(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -180,6 +182,13 @@ export const BattleScreen: React.FC = () => {
       -1,
       true
     );
+
+    // Show tutorial if level 1 and not seen before
+    const progress = useProgressStore.getState();
+    if (selectedLevel === 1 && !progress.hasSeenTutorial) {
+      setShowTutorial(true);
+      pauseGame();
+    }
   }, []);
 
   // Game loop
@@ -240,6 +249,17 @@ export const BattleScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* Tutorial Overlay */}
+      {showTutorial && (
+        <TutorialOverlay 
+          onClose={() => {
+            setShowTutorial(false);
+            resumeGame();
+            useProgressStore.getState().setHasSeenTutorial(true);
+          }} 
+        />
+      )}
+
       {/* HUD Header */}
       <BattleHUD 
         onPause={() => (isPaused ? resumeGame() : pauseGame())} 
