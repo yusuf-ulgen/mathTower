@@ -27,9 +27,20 @@ interface Props {
 export const SpartanUnit: React.FC<Props> = React.memo(({ color, size = 14, isMoving, value }) => {
   const colors = TOWER_COLORS[color] || TOWER_COLORS.neutral;
 
-  // Scale based on value — very subtle
-  const scale = value && value > 1 ? Math.min(1.2, 1 + (value - 1) * 0.05) : 1;
+  // Scale based on value — ensure it grows enough for large numbers
+  const scale = value && value > 1 
+    ? Math.min(1.6, 1 + (Math.log10(value)) * 0.25) 
+    : 1;
   const s = size * scale;
+
+  // Adjust font size based on number of digits
+  const getFontSize = () => {
+    if (!value) return s * 0.6;
+    const digits = value.toString().length;
+    if (digits >= 3) return s * 0.45;
+    if (digits === 2) return s * 0.55;
+    return s * 0.6;
+  };
 
   return (
     <View style={[styles.container, { width: s, height: s }]}>
@@ -43,10 +54,15 @@ export const SpartanUnit: React.FC<Props> = React.memo(({ color, size = 14, isMo
         borderColor: 'rgba(255,255,255,0.3)',
         justifyContent: 'center',
         alignItems: 'center',
+        padding: 1,
       }}>
         {/* Value inside if needed */}
         {value && value > 1 && (
-          <Text style={[styles.valueText, { fontSize: s * 0.6 }]}>
+          <Text 
+            numberOfLines={1}
+            adjustsFontSizeToFit={true}
+            style={[styles.valueText, { fontSize: getFontSize() }]}
+          >
             {value}
           </Text>
         )}

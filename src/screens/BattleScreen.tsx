@@ -225,9 +225,15 @@ export const BattleScreen: React.FC = () => {
 
     if (tower.color === 'blue') {
       if (selectedTowerId === towerId) {
+        // Upgrade if already selected
         upgradeTower(towerId);
         setSelectedTowerId(null);
+      } else if (selectedTowerId) {
+        // Send reinforcements if another tower is selected
+        sendAttack(selectedTowerId, towerId);
+        setSelectedTowerId(null);
       } else {
+        // Select if nothing or enemy selected
         setSelectedTowerId(towerId);
       }
     } else if (selectedTowerId) {

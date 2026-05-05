@@ -436,7 +436,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Friendly — add units
         towers[targetIdx] = {
           ...target,
-          unitCount: Math.min(target.maxCapacity, target.unitCount + unit.value),
+          unitCount: target.unitCount + unit.value,
         };
       } else {
         // Enemy — subtract, possibly capture
