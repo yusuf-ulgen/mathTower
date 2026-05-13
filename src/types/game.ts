@@ -170,4 +170,4 @@ export interface ProgressState {
 // ===================
 // Screen Navigation
 // ===================
-export type ScreenName = 'menu' | 'levelMap' | 'researchLab' | 'battle';
+export type ScreenName = 'menu' | 'levelMap' | 'researchLab' | 'battle' | 'releaseNotes';
