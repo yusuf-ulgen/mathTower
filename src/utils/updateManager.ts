@@ -5,6 +5,7 @@ import { Linking, Platform } from 'react-native';
 const LAST_SHOWN_NOTES_VERSION = '@last_shown_notes_version';
 // Not: Bu linki kendi Play Store linkinizle değiştirmelisiniz.
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.yusufulgen.mathtowerwar'; 
+const DEVELOPER_URL = 'https://play.google.com/store/apps/developer?id=Yusuf+Ulgen';
 
 export const checkShowReleaseNotes = async () => {
   try {
@@ -41,4 +42,8 @@ export const checkForUpdate = async () => {
 
 export const redirectToPlayStore = () => {
     Linking.openURL(PLAY_STORE_URL).catch(err => console.error("Link error:", err));
+};
+
+export const redirectToDeveloperProfile = () => {
+    Linking.openURL(DEVELOPER_URL).catch(err => console.error("Link error:", err));
 };
